@@ -10,7 +10,7 @@ import {
   EXACT_O2_DIFF,
   EXACT_FLOW_DIFF,
 } from "@/lib/matching"
-import { Flame, Wind, Layers, BookmarkPlus, Info } from "lucide-react"
+import { Flame, Wind, Layers, BookmarkPlus, Info, Download, Crosshair, CheckCircle2 } from "lucide-react"
 
 export interface ScenarioData {
   material: string
@@ -88,6 +88,81 @@ export default function ExperimentLabView({
     else onSaveScenarioB(data)
 
     setSaveToast(`Saved to Scenario ${target}!`)
+    setTimeout(() => setSaveToast(null), 3000)
+  }
+
+  // Snap sliders to the nearest measured spaceflight run
+  const handleSnapToNearestRun = () => {
+    if (!top3 || top3.length === 0) return
+    const nearest = top3[0]
+    const o2 = parseFloat(nearest.oxygen_percent)
+    const flow = parseFloat(nearest.airflow_end_cm_s)
+    if (!isNaN(o2)) setOxygen(o2)
+    if (!isNaN(flow)) setAirflow(flow)
+    setSaveToast(`Snapped to ${nearest.run_id} (${o2}% O₂, ${flow} cm/s)`)
+    setTimeout(() => setSaveToast(null), 3000)
+  }
+
+  // Export currently matched top 3 runs to CSV with exact 20 source columns
+  const handleExportTop3CSV = () => {
+    if (!top3 || top3.length === 0) return
+    const headers = [
+      "run_id",
+      "experiment",
+      "gravity",
+      "material",
+      "geometry",
+      "flow_direction",
+      "sample_size_cm",
+      "sample_size_type",
+      "sample_id",
+      "airflow_start_cm_s",
+      "airflow_end_cm_s",
+      "oxygen_percent",
+      "pressure_atm",
+      "outcome",
+      "outcome_as_written",
+      "flame_spread_rate_1e3_cm_s",
+      "delta_t_s",
+      "source_title",
+      "page_or_figure",
+      "notes",
+    ]
+    const lines = [headers.join(",")]
+    top3.forEach((r) => {
+      const rowVals = [
+        r.run_id,
+        r.experiment,
+        r.gravity,
+        `"${r.material}"`,
+        r.geometry,
+        r.flow_direction,
+        r.sample_size_cm,
+        r.sample_size_type,
+        r.sample_id,
+        r.airflow_start_cm_s,
+        r.airflow_end_cm_s,
+        r.oxygen_percent,
+        r.pressure_atm,
+        r.outcome,
+        `"${r.outcome_as_written}"`,
+        r.flame_spread_rate_1e3_cm_s,
+        r.delta_t_s,
+        `"${r.source_title}"`,
+        `"${r.page_or_figure}"`,
+        `"${r.notes.replace(/"/g, '""')}"`,
+      ]
+      lines.push(rowVals.join(","))
+    })
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("download", `experiment_lab_nearest_runs_${materialFamily}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setSaveToast("✓ Exported nearest runs CSV!")
     setTimeout(() => setSaveToast(null), 3000)
   }
 
@@ -243,17 +318,29 @@ export default function ExperimentLabView({
                 : "bg-zinc-900/90 border-2 border-zinc-600 text-slate-100 shadow-xl"
             }`}
           >
-            <div className="flex items-center gap-2 font-extrabold text-base mb-1.5">
-              <span
-                className={`h-3 w-3 rounded-full ${
-                  status === "Exact match"
-                    ? "bg-emerald-400 animate-pulse ring-2 ring-emerald-300"
-                    : status === "Nearby observation"
-                    ? "bg-amber-400 ring-2 ring-amber-300"
-                    : "bg-zinc-400"
-                }`}
-              />
-              Evidence Status: {status}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3 mb-2">
+              <div className="flex items-center gap-2 font-extrabold text-base">
+                <span
+                  className={`h-3 w-3 rounded-full ${
+                    status === "Exact match"
+                      ? "bg-emerald-400 animate-pulse ring-2 ring-emerald-300"
+                      : status === "Nearby observation"
+                      ? "bg-amber-400 ring-2 ring-amber-300"
+                      : "bg-zinc-400"
+                  }`}
+                />
+                Evidence Status: {status}
+              </div>
+              {top3.length > 0 && status !== "Exact match" && (
+                <button
+                  onClick={handleSnapToNearestRun}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-all shadow"
+                  title="Snap sliders to nearest real spaceflight run"
+                >
+                  <Crosshair className="h-3.5 w-3.5 text-amber-300" />
+                  Snap to nearest run ({top3[0].run_id})
+                </button>
+              )}
             </div>
             <p className="text-xs font-medium text-slate-100 leading-relaxed">{message}</p>
             <div className="mt-2.5 text-xs text-slate-200 font-mono font-medium">
@@ -264,6 +351,21 @@ export default function ExperimentLabView({
           {/* Flame Visual & Condition Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/20 bg-black/90 p-5 text-center flex flex-col items-center justify-center shadow-xl">
+              {/* Measured vs Interpolated Badge */}
+              <div className="mb-2 w-full flex justify-center">
+                {status === "Exact match" ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-200 border border-emerald-400/60 shadow">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Measured run (within ±0.1% O₂, ±0.2 cm/s of ISS run)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/60 shadow">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    Interpolated visual (visual is illustrative; point lies between or outside measured runs)
+                  </span>
+                )}
+              </div>
+
               <svg width="260" height="170" viewBox="0 0 260 170" className="mx-auto">
                 <defs>
                   <radialGradient id="labBlueGlow" cx="50%" cy="50%" r="50%">
@@ -326,9 +428,19 @@ export default function ExperimentLabView({
 
           {/* Closest 3 Measured Rows */}
           <div className="space-y-3 pt-2">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">
-              Closest Measured Experimental Rows (Top 3)
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">
+                Closest Measured Experimental Rows (Top 3)
+              </h3>
+              <button
+                onClick={handleExportTop3CSV}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-black transition-all shadow"
+                title="Download CSV of the 3 nearest measured runs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Nearest Runs CSV
+              </button>
+            </div>
             {top3.map((r) => {
               const press = formatPressure(r)
               const flow = formatAirflow(r)

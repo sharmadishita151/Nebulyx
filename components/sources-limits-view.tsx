@@ -240,9 +240,14 @@ export default function SourcesLimitsView() {
               </span>
             </li>
           </ul>
-          <p className="mt-3.5 pt-3 border-t border-rose-500/20 text-xs text-slate-200 font-medium">
-            How this was made: data extracted from the papers with AI assistance; the website was built with AI coding tools.
-          </p>
+          <div className="mt-3.5 pt-3 border-t border-rose-500/20 space-y-1.5 text-xs text-slate-200 font-medium">
+            <p>
+              <strong>Visual rendering note:</strong> Flame visuals for slider positions between discrete spaceflight tests are illustrative interpolations, not AI-predicted flame shapes. Only discrete points matching published runs represent real measurements.
+            </p>
+            <p className="text-slate-300">
+              How this was made: data extracted from the papers with AI assistance; the website was built with AI coding tools.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -299,7 +304,45 @@ export default function SourcesLimitsView() {
         </div>
       </div>
 
-      {/* 4. Complete Dataset Browser (83 Rows, 20 Columns) */}
+      {/* 4. Concrete Evidence Gaps & Untested Conditions */}
+      <div className="mb-10">
+        <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-rose-400" /> Concrete Evidence Gaps & Untested Parameter Envelopes
+        </h2>
+        <div className="rounded-2xl border-2 border-rose-500/35 bg-rose-950/30 p-5 shadow-xl space-y-3.5 text-xs leading-relaxed text-slate-100 font-medium">
+          <p>
+            Spaceflight microgravity combustion data is extraordinarily sparse. From the 83 published runs across both papers, the following physical regions remain <strong className="text-rose-300 font-bold">completely unmeasured</strong>:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">1. Low-Speed Radiative Quench Edge (2 to 5 cm/s)</strong>
+              In concurrent flow over cotton-fiberglass fabric, flames consistently quenched at final ventilation speeds between ~2.2 and 5.0 cm/s. Forced flows slower than these terminal speeds cannot sustain concurrent flame spread in microgravity.
+            </div>
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">2. Opposed Flow Lower Boundary (&lt; 0.41 cm/s)</strong>
+              For PMMA cylindrical rods in opposed flow, the lowest tested speed in BASS-II was 0.41 cm/s. The purely quiescent microgravity regime (&lt; 0.41 cm/s) was never tested.
+            </div>
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">3. Untested Hypoxic Boundary (&lt; 16.4% O₂)</strong>
+              Fabric tests cease at 16.4% O₂ and PMMA tests at 16.8% O₂. Combustion behavior in deeply hypoxic spacecraft environments (&lt; 16.4% O₂) is completely absent from the dataset.
+            </div>
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">4. PMMA Upper Flow Ceiling (&gt; 7.55 cm/s)</strong>
+              Opposed flow over cylindrical rods was only tested up to 7.55 cm/s. The blow-off extinction boundary for PMMA cylinders at higher forced flows remains unmeasured.
+            </div>
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">5. Large Geometries &amp; Fuel Diversity</strong>
+              Experiments were restricted to 1.2 cm and 2.2 cm fabric sheets, and 0.64 cm, 0.95 cm, and 1.27 cm PMMA rods. Complex 3D components, wires, foam, and structural polymers have zero representation.
+            </div>
+            <div className="rounded-xl bg-zinc-950/70 p-3.5 border border-white/10">
+              <strong className="text-amber-300 block mb-1">6. Sub-Atmospheric Exploration Pressures</strong>
+              Fabric runs were conducted exclusively at 1.0 atm (sea-level equivalent). Exploration atmospheres proposed for future lunar/Mars habitats (e.g., 0.56 atm / 8.2 psi with 34% O₂) were not tested.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Complete Dataset Browser (83 Rows, 20 Columns) */}
       <div className="mb-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
@@ -307,7 +350,7 @@ export default function SourcesLimitsView() {
               <Table className="h-5 w-5 text-sky-400" /> Complete Dataset Browser (83 Rows, 20 Columns)
             </h2>
             <p className="text-xs text-slate-200 font-medium mt-0.5">
-              Inspect every published row and column in data/measurements_all.csv.
+              Inspect every published row and column in data/measurements_all.csv with verifiable NTRS and DOI citations.
             </p>
           </div>
 
@@ -357,7 +400,8 @@ export default function SourcesLimitsView() {
                   <th className="px-3.5 py-3">Outcome</th>
                   <th className="px-3.5 py-3">Spread Rate (10⁻³ cm/s)</th>
                   <th className="px-3.5 py-3">Δt (s)</th>
-                  <th className="px-3.5 py-3">Source & Page</th>
+                  <th className="px-3.5 py-3">Table Location</th>
+                  <th className="px-3.5 py-3">Archive Identifier (NTRS / DOI)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 font-mono">
@@ -386,6 +430,17 @@ export default function SourcesLimitsView() {
                     <td className="px-3.5 py-2.5 text-slate-200 font-medium">{r.delta_t_s || "—"}</td>
                     <td className="px-3.5 py-2.5 text-slate-300 font-sans truncate max-w-[200px]" title={`${r.source_title} (${r.page_or_figure})`}>
                       {r.page_or_figure}
+                    </td>
+                    <td className="px-3.5 py-2.5 font-mono text-[11px] font-bold">
+                      {r.material.toLowerCase().includes("fabric") ? (
+                        <span className="bg-sky-950/60 text-sky-200 border border-sky-400/30 px-2 py-0.5 rounded">
+                          NTRS 20150008962
+                        </span>
+                      ) : (
+                        <span className="bg-purple-950/60 text-purple-200 border border-purple-400/30 px-2 py-0.5 rounded">
+                          10.1038/s41598-017-18398-4
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

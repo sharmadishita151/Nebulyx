@@ -28,13 +28,45 @@ import {
 
 type ActiveView = "home" | "lab" | "map" | "compare" | "sources"
 
-// Verified Unsplash aerospace & space combustion imagery for HUD
-const SPACE_STATION_IMG =
-  "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=800&auto=format&fit=crop"
-const ORBIT_EARTH_IMG =
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop"
-const ROCKET_FIRE_IMG =
-  "https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?q=80&w=800&auto=format&fit=crop"
+// Self-contained inline vector previews for environment presets (no external network dependencies)
+function OrbitPresetIcon() {
+  return (
+    <svg viewBox="0 0 100 60" className="h-full w-full bg-slate-950/80">
+      <defs>
+        <radialGradient id="orbitGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="30" r="13" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.5" />
+      <ellipse cx="50" cy="30" rx="34" ry="11" fill="none" stroke="#7dd3fc" strokeWidth="1.2" strokeDasharray="3,2" transform="rotate(-15, 50, 30)" />
+      <circle cx="24" cy="24" r="3" fill="#38bdf8" />
+      <circle cx="50" cy="30" r="20" fill="url(#orbitGlow)" pointerEvents="none" />
+    </svg>
+  )
+}
+
+function AtmospherePresetIcon() {
+  return (
+    <svg viewBox="0 0 100 60" className="h-full w-full bg-slate-950/80">
+      <rect x="22" y="10" width="56" height="40" rx="6" fill="#18181b" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3,2" />
+      <circle cx="50" cy="30" r="10" fill="#f59e0b" fillOpacity="0.25" stroke="#fbbf24" strokeWidth="1.5" />
+      <circle cx="50" cy="30" r="4" fill="#fbbf24" />
+      <line x1="30" y1="30" x2="40" y2="30" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" />
+    </svg>
+  )
+}
+
+function QuenchPresetIcon() {
+  return (
+    <svg viewBox="0 0 100 60" className="h-full w-full bg-slate-950/80">
+      <ellipse cx="50" cy="30" rx="16" ry="12" fill="#ef4444" fillOpacity="0.2" stroke="#f87171" strokeWidth="1.5" strokeDasharray="3,2" />
+      <circle cx="50" cy="30" r="4.5" fill="#fca5a5" />
+      <line x1="22" y1="44" x2="78" y2="44" stroke="#ef4444" strokeWidth="1.2" strokeDasharray="3,2" />
+      <text x="50" y="18" fill="#fca5a5" fontSize="7.5" textAnchor="middle" fontFamily="monospace" fontWeight="bold">QUENCH</text>
+    </svg>
+  )
+}
 
 export default function HomePage() {
   const [activeView, setActiveView] = React.useState<ActiveView>("home")
@@ -47,6 +79,22 @@ export default function HomePage() {
   const [scenarioA, setScenarioA] = React.useState<ScenarioItem | null>(null)
   const [scenarioB, setScenarioB] = React.useState<ScenarioItem | null>(null)
   const [toastMessage, setToastMessage] = React.useState<string | null>(null)
+  const [lowPowerMode, setLowPowerMode] = React.useState<boolean>(false)
+
+  // Auto-detect reduced-motion setting or mobile viewport for low-power mode
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+      if (mq.matches || window.innerWidth < 768) {
+        setLowPowerMode(true)
+      }
+      const onChange = (e: MediaQueryListEvent) => {
+        if (e.matches) setLowPowerMode(true)
+      }
+      mq.addEventListener("change", onChange)
+      return () => mq.removeEventListener("change", onChange)
+    }
+  }, [])
 
   // Handler for instant microgravity condition presets (No external Unsplash links)
   const handleApplyPreset = (type: "orbit" | "atmosphere" | "combustion") => {
@@ -129,6 +177,7 @@ export default function HomePage() {
           height="100vh"
           preset={preset}
           params={dynamicParams}
+          renderScale={lowPowerMode ? 0.55 : 1.0}
           interactive={activeView === "home"}
           className="w-full h-full"
         />
@@ -234,6 +283,20 @@ export default function HomePage() {
                 <span>Sources & Limits</span>
               </button>
 
+              {/* Low-Power Eco Mode Toggle */}
+              <button
+                onClick={() => setLowPowerMode(!lowPowerMode)}
+                className={`ml-1 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
+                  lowPowerMode
+                    ? "border-emerald-400 bg-emerald-950/70 text-emerald-200"
+                    : "border-white/20 text-amber-200 hover:bg-white/15 hover:text-white"
+                }`}
+                title="Toggle shader resolution scale"
+                style={{ textShadow: "0 1px 3px #000" }}
+              >
+                {lowPowerMode ? "Eco Mode" : "Full Quality"}
+              </button>
+
               {/* Shader HUD Toggle */}
               <button
                 onClick={() => setShowHUD(!showHUD)}
@@ -314,7 +377,7 @@ export default function HomePage() {
                   className="flex items-center gap-2.5 rounded-full bg-white hover:bg-slate-100 px-6 py-3 text-xs font-extrabold text-[#050505] shadow-xl shadow-black/80 transition-all hover:scale-[1.03] active:scale-[0.98]"
                 >
                   <Flame className="h-4 w-4 text-orange-600" />
-                  <span>Launch Experiment Lab</span>
+                  <span>Open Lab</span>
                   <svg
                     className="w-3.5 h-3.5 text-[#050505]"
                     viewBox="0 0 12 10"
@@ -356,19 +419,35 @@ export default function HomePage() {
                 </button>
               </div>
 
+              {/* Mission-Control Stat Chips */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-mono">
+                <span className="flex items-center gap-1.5 bg-black/80 px-3 py-1.5 rounded-lg border border-white/15 text-slate-200 font-semibold shadow">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  83 Published ISS Runs (31 Fabric / 52 PMMA)
+                </span>
+                <span className="flex items-center gap-1.5 bg-black/80 px-3 py-1.5 rounded-lg border border-white/15 text-slate-200 font-semibold shadow">
+                  <BookOpen className="h-3.5 w-3.5 text-sky-400" />
+                  2 Sources (NASA NTRS & Scientific Reports)
+                </span>
+                <span className="flex items-center gap-1.5 bg-black/80 px-3 py-1.5 rounded-lg border border-white/15 text-slate-200 font-semibold shadow">
+                  <Info className="h-3.5 w-3.5 text-amber-400" />
+                  Evidence Limit: Low-flow quench 2–5 cm/s
+                </span>
+              </div>
+
               {/* Ground-Truth Badge */}
               <div
-                className="mt-6 inline-flex items-center gap-2.5 text-xs font-mono font-semibold text-amber-200/90 bg-black/60 px-4 py-2 rounded-full border border-orange-500/30 shadow-md backdrop-blur-md"
+                className="mt-4 inline-flex items-center gap-2.5 text-xs font-mono font-semibold text-amber-200/90 bg-black/60 px-4 py-2 rounded-full border border-orange-500/30 shadow-md backdrop-blur-md"
                 style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
               >
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse motion-reduce:animate-none"></span>
-                <span>83 Published ISS Runs • 0 AI Extrapolations • Zhao et al. (2015) & Link et al. (2018)</span>
+                <span>83 Published ISS Runs • 0 AI-generated data points. Visuals between runs are interpolated and flagged. • Zhao et al. (2015) & Link et al. (2018)</span>
               </div>
             </div>
 
             {/* Interactive Telemetry HUD Card */}
             {showHUD && (
-              <div className="pointer-events-auto w-full lg:w-[410px] rounded-2xl border border-white/25 bg-[#090914]/95 p-5 shadow-2xl backdrop-blur-3xl">
+              <div className="pointer-events-auto w-full lg:w-[420px] rounded-2xl border border-white/25 bg-[#090914]/95 p-5 shadow-2xl backdrop-blur-3xl">
                 <div className="flex items-center justify-between border-b border-white/15 pb-3 mb-4">
                   <div className="flex items-center gap-2">
                     <Gauge className="h-4 w-4 text-orange-400" />
@@ -376,106 +455,66 @@ export default function HomePage() {
                       ISS Duct Telemetry
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-orange-300">
-                    Live Shader Coupling
+                  <span className="text-[11px] font-mono font-bold text-orange-300 bg-orange-950/70 px-2 py-0.5 rounded border border-orange-500/30">
+                    Published ISS Runs (static dataset)
                   </span>
                 </div>
 
-                {/* Preset Selector */}
-                <div className="mb-4">
-                  <div className="text-xs font-bold text-slate-200 mb-1.5 uppercase tracking-wider">
-                    Accretion Spectrum:
+                {/* Primary Combustion Controls */}
+                <div className="space-y-4 mb-4">
+                  {/* Oxygen Slider */}
+                  <div>
+                    <div className="flex justify-between items-center text-xs mb-1.5">
+                      <span className="text-white font-bold flex items-center gap-1.5">
+                        <Layers className="h-4 w-4 text-orange-400" /> Oxygen Level (Primary):
+                      </span>
+                      <span className="font-mono text-orange-300 font-bold text-sm">
+                        {oxygen.toFixed(1)}% O₂
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="16.0"
+                      max="21.0"
+                      step="0.1"
+                      value={oxygen}
+                      onChange={(e) => setOxygen(parseFloat(e.target.value))}
+                      className="w-full accent-orange-500 h-2 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
+                    />
+                    <div className="flex justify-between text-xs text-slate-200 font-medium mt-1 font-mono">
+                      <span>16.0% (Quench edge)</span>
+                      <span>21.0% (Ambient)</span>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {(["combustion", "ember", "crimson", "glacier"] as AccretionPreset[]).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPreset(p)}
-                        className={`rounded-lg py-1.5 text-center text-xs font-bold capitalize transition-all ${
-                          preset === p
-                            ? "bg-orange-500/30 text-orange-200 border-2 border-orange-400 shadow-md shadow-orange-500/20"
-                            : "border border-zinc-700 bg-zinc-900/90 text-slate-200 hover:text-white hover:border-zinc-500 font-semibold"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+
+                  {/* Airflow Slider */}
+                  <div>
+                    <div className="flex justify-between items-center text-xs mb-1.5">
+                      <span className="text-white font-bold flex items-center gap-1.5">
+                        <Compass className="h-4 w-4 text-orange-400" /> Forced Duct Velocity (Primary):
+                      </span>
+                      <span className="font-mono text-orange-300 font-bold text-sm">
+                        {airflow.toFixed(2)} cm/s
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="10.0"
+                      step="0.1"
+                      value={airflow}
+                      onChange={(e) => setAirflow(parseFloat(e.target.value))}
+                      className="w-full accent-orange-500 h-2 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
+                    />
+                    <div className="flex justify-between text-xs text-slate-200 font-medium mt-1 font-mono">
+                      <span>0.5 cm/s (Quenching)</span>
+                      <span>10.0 cm/s (Forced)</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Oxygen Slider */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center text-xs mb-1.5">
-                    <span className="text-slate-100 font-bold flex items-center gap-1.5">
-                      <Layers className="h-4 w-4 text-orange-400" /> Oxygen Level:
-                    </span>
-                    <span className="font-mono text-orange-300 font-bold text-sm">
-                      {oxygen.toFixed(1)}% O₂
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="16.0"
-                    max="21.0"
-                    step="0.1"
-                    value={oxygen}
-                    onChange={(e) => setOxygen(parseFloat(e.target.value))}
-                    className="w-full accent-orange-500 h-2 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
-                  />
-                  <div className="flex justify-between text-xs text-slate-200 font-medium mt-1 font-mono">
-                    <span>16.0% (Quench edge)</span>
-                    <span>21.0% (Ambient)</span>
-                  </div>
-                </div>
-
-                {/* Airflow Slider */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center text-xs mb-1.5">
-                    <span className="text-slate-100 font-bold flex items-center gap-1.5">
-                      <Compass className="h-4 w-4 text-orange-400" /> Forced Duct Velocity:
-                    </span>
-                    <span className="font-mono text-orange-300 font-bold text-sm">
-                      {airflow.toFixed(2)} cm/s
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="10.0"
-                    step="0.1"
-                    value={airflow}
-                    onChange={(e) => setAirflow(parseFloat(e.target.value))}
-                    className="w-full accent-orange-500 h-2 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
-                  />
-                  <div className="flex justify-between text-xs text-slate-200 font-medium mt-1 font-mono">
-                    <span>0.5 cm/s (Quenching)</span>
-                    <span>10.0 cm/s (Forced)</span>
-                  </div>
-                </div>
-
-                {/* Solar Corona / Flare */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center text-xs mb-1.5">
-                    <span className="text-slate-100 font-bold flex items-center gap-1.5">
-                      <Sparkles className="h-4 w-4 text-orange-400" /> Photon Crown Flare:
-                    </span>
-                    <span className="font-mono text-orange-300 font-bold text-sm">
-                      {flareFactor.toFixed(2)}×
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.2"
-                    max="2.5"
-                    step="0.05"
-                    value={flareFactor}
-                    onChange={(e) => setFlareFactor(parseFloat(e.target.value))}
-                    className="w-full accent-orange-500 h-2 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
-                  />
-                </div>
-
-                {/* Microgravity Condition Quick-Presets (No external Unsplash links!) */}
-                <div className="pt-3 border-t border-white/15">
+                {/* Microgravity Condition Quick-Presets (SVG previews, no external images) */}
+                <div className="pt-3 border-t border-white/15 mb-4">
                   <div className="flex items-center justify-between text-xs font-bold text-white mb-2">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-orange-400" /> Environment Presets:
@@ -497,12 +536,8 @@ export default function HomePage() {
                       }`}
                       title="Click to apply ISS Orbit Ambient: 21.0% O₂, 5.0 cm/s flow"
                     >
-                      <img
-                        src={SPACE_STATION_IMG}
-                        alt="ISS Orbit"
-                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30 flex flex-col justify-end p-2">
+                      <OrbitPresetIcon />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent flex flex-col justify-end p-2 pointer-events-none">
                         <span className="text-xs font-extrabold text-white leading-tight">
                           ISS Orbit
                         </span>
@@ -523,14 +558,10 @@ export default function HomePage() {
                       }`}
                       title="Click to apply BASS-II Glovebox Chamber: 18.7% O₂, 3.5 cm/s flow"
                     >
-                      <img
-                        src={ORBIT_EARTH_IMG}
-                        alt="Atmosphere"
-                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30 flex flex-col justify-end p-2">
+                      <AtmospherePresetIcon />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent flex flex-col justify-end p-2 pointer-events-none">
                         <span className="text-xs font-extrabold text-white leading-tight">
-                          Atmosphere
+                          Glovebox
                         </span>
                         <span className="text-[10px] font-mono text-orange-300 font-bold">
                           18.7% • 3.5cm/s
@@ -549,20 +580,62 @@ export default function HomePage() {
                       }`}
                       title="Click to apply Radiative Quench Edge: 16.4% O₂, 1.0 cm/s flow"
                     >
-                      <img
-                        src={ROCKET_FIRE_IMG}
-                        alt="Combustion"
-                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30 flex flex-col justify-end p-2">
+                      <QuenchPresetIcon />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent flex flex-col justify-end p-2 pointer-events-none">
                         <span className="text-xs font-extrabold text-white leading-tight">
-                          Combustion
+                          Quench Edge
                         </span>
                         <span className="text-[10px] font-mono text-rose-300 font-bold">
                           16.4% • 1cm/s
                         </span>
                       </div>
                     </button>
+                  </div>
+                </div>
+
+                {/* Display options (visual only, no effect on data) */}
+                <div className="pt-3 border-t border-white/15 bg-zinc-950/60 p-3 rounded-xl border border-white/10">
+                  <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Display options (visual only, no effect on data)
+                  </div>
+
+                  {/* Accretion Spectrum */}
+                  <div className="mb-3">
+                    <div className="text-[11px] font-semibold text-slate-400 mb-1">
+                      Accretion Spectrum Theme:
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {(["combustion", "ember", "crimson", "glacier"] as AccretionPreset[]).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPreset(p)}
+                          className={`rounded-lg py-1 text-center text-xs font-bold capitalize transition-all ${
+                            preset === p
+                              ? "bg-orange-500/30 text-orange-200 border border-orange-400 shadow-sm"
+                              : "border border-zinc-700 bg-zinc-900/90 text-slate-300 hover:text-white"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Photon Crown Flare */}
+                  <div>
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-slate-300 font-medium">Photon Crown Flare:</span>
+                      <span className="font-mono text-orange-300 font-bold text-xs">{flareFactor.toFixed(2)}×</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="2.5"
+                      step="0.05"
+                      value={flareFactor}
+                      onChange={(e) => setFlareFactor(parseFloat(e.target.value))}
+                      className="w-full accent-orange-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer border border-zinc-700"
+                    />
                   </div>
                 </div>
               </div>

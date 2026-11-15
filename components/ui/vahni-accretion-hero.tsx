@@ -17,10 +17,10 @@ import {
   Info,
 } from "lucide-react"
 
-// Verified Unsplash aerospace & space combustion imagery
-const SPACE_STATION_IMG = "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=800&auto=format&fit=crop"
-const ORBIT_EARTH_IMG = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop"
-const ROCKET_FIRE_IMG = "https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?q=80&w=800&auto=format&fit=crop"
+// Bundled local preview backgrounds (no external hotlinks)
+const SPACE_STATION_IMG = "/logo.png"
+const ORBIT_EARTH_IMG = "/logo.png"
+const ROCKET_FIRE_IMG = "/logo.png"
 
 export default function VahniAccretionHero({
   onNavigate,

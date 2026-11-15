@@ -18,6 +18,7 @@ import {
   Info,
   CheckCircle2,
   XCircle,
+  Download,
 } from "lucide-react"
 
 export interface ScenarioItem {
@@ -148,15 +149,6 @@ export default function CompareView({
     return scenarioA.material !== scenarioB.material || scenarioA.familyName !== scenarioB.familyName
   }, [scenarioA, scenarioB])
 
-  // Delta calculations
-  const deltas = React.useMemo(() => {
-    if (!scenarioA || !scenarioB) return null
-    return {
-      dO2: scenarioB.oxygen - scenarioA.oxygen,
-      dFlow: scenarioB.airflow - scenarioA.airflow,
-    }
-  }, [scenarioA, scenarioB])
-
   // Compute evidence for scenario A
   const evidenceA = React.useMemo(() => {
     if (!scenarioA) return null
@@ -178,6 +170,95 @@ export default function CompareView({
     )
     return computeEvidenceStatus(rows, scenarioB.oxygen, scenarioB.airflow)
   }, [scenarioB])
+
+  // Delta calculations
+  const deltas = React.useMemo(() => {
+    if (!scenarioA || !scenarioB) return null
+    const dO2 = scenarioB.oxygen - scenarioA.oxygen
+    const dFlow = scenarioB.airflow - scenarioA.airflow
+
+    let dSpread: number | null = null
+    const rateAStr = evidenceA?.top3[0]?.flame_spread_rate_1e3_cm_s
+    const rateBStr = evidenceB?.top3[0]?.flame_spread_rate_1e3_cm_s
+    if (rateAStr && rateBStr) {
+      const rA = parseFloat(rateAStr)
+      const rB = parseFloat(rateBStr)
+      if (!isNaN(rA) && !isNaN(rB)) {
+        dSpread = rB - rA
+      }
+    }
+
+    return {
+      dO2,
+      dFlow,
+      dSpread,
+    }
+  }, [scenarioA, scenarioB, evidenceA, evidenceB])
+
+  // Export compared scenarios to CSV with exact 20 source columns
+  const handleExportComparisonCSV = () => {
+    const rowsToExport: MeasurementRow[] = []
+    if (evidenceA?.top3[0]) rowsToExport.push(evidenceA.top3[0])
+    if (evidenceB?.top3[0]) rowsToExport.push(evidenceB.top3[0])
+    if (rowsToExport.length === 0) return
+
+    const headers = [
+      "run_id",
+      "experiment",
+      "gravity",
+      "material",
+      "geometry",
+      "flow_direction",
+      "sample_size_cm",
+      "sample_size_type",
+      "sample_id",
+      "airflow_start_cm_s",
+      "airflow_end_cm_s",
+      "oxygen_percent",
+      "pressure_atm",
+      "outcome",
+      "outcome_as_written",
+      "flame_spread_rate_1e3_cm_s",
+      "delta_t_s",
+      "source_title",
+      "page_or_figure",
+      "notes",
+    ]
+    const lines = [headers.join(",")]
+    rowsToExport.forEach((r) => {
+      const rowVals = [
+        r.run_id,
+        r.experiment,
+        r.gravity,
+        `"${r.material}"`,
+        r.geometry,
+        r.flow_direction,
+        r.sample_size_cm,
+        r.sample_size_type,
+        r.sample_id,
+        r.airflow_start_cm_s,
+        r.airflow_end_cm_s,
+        r.oxygen_percent,
+        r.pressure_atm,
+        r.outcome,
+        `"${r.outcome_as_written}"`,
+        r.flame_spread_rate_1e3_cm_s,
+        r.delta_t_s,
+        `"${r.source_title}"`,
+        `"${r.page_or_figure}"`,
+        `"${r.notes.replace(/"/g, '""')}"`,
+      ]
+      lines.push(rowVals.join(","))
+    })
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("download", "comparison_scenarios_a_b.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -285,10 +366,21 @@ export default function CompareView({
           {/* Delta Box if both are loaded */}
           {deltas && scenarioA && scenarioB && (
             <div className="mb-6 rounded-2xl border border-sky-400/40 bg-[#0c1222]/95 p-5 shadow-xl">
-              <div className="text-center text-xs font-mono font-bold uppercase tracking-wider text-sky-300 mb-3">
-                Condition Difference (Scenario B − Scenario A)
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 pb-3 mb-4">
+                <div className="text-xs font-mono font-bold uppercase tracking-wider text-sky-300">
+                  Condition Difference (Scenario B − Scenario A)
+                </div>
+                <button
+                  onClick={handleExportComparisonCSV}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-black transition-all shadow"
+                  title="Export both scenario measurements to CSV"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export Comparison CSV
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-center divide-x divide-white/15">
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center divide-x divide-white/15">
                 <div>
                   <div className="text-xs font-bold text-slate-200">Δ Oxygen Concentration</div>
                   <div
@@ -317,6 +409,31 @@ export default function CompareView({
                     {deltas.dFlow > 0 ? `+${deltas.dFlow.toFixed(2)}` : deltas.dFlow.toFixed(2)} cm/s
                   </div>
                 </div>
+                {deltas.dSpread !== null ? (
+                  <div className="col-span-2 md:col-span-1">
+                    <div className="text-xs font-bold text-slate-200">Δ Measured Spread Rate</div>
+                    <div
+                      className={`mt-1 text-2xl sm:text-3xl font-mono font-extrabold ${
+                        deltas.dSpread > 0
+                          ? "text-emerald-400"
+                          : deltas.dSpread < 0
+                          ? "text-rose-400"
+                          : "text-amber-300"
+                      }`}
+                    >
+                      {deltas.dSpread > 0 ? `+${deltas.dSpread.toFixed(2)}` : deltas.dSpread.toFixed(2)} × 10⁻³ cm/s
+                    </div>
+                  </div>
+                ) : (
+                  <div className="col-span-2 md:col-span-1">
+                    <div className="text-xs font-bold text-slate-200">Observed Outcomes</div>
+                    <div className="mt-2 text-xs font-mono font-bold text-white flex items-center justify-center gap-1.5 flex-wrap">
+                      <span className="bg-white/10 px-2 py-0.5 rounded text-sky-200">A: {evidenceA?.top3[0]?.outcome_as_written || evidenceA?.top3[0]?.outcome || "N/A"}</span>
+                      <span>vs</span>
+                      <span className="bg-white/10 px-2 py-0.5 rounded text-purple-200">B: {evidenceB?.top3[0]?.outcome_as_written || evidenceB?.top3[0]?.outcome || "N/A"}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
