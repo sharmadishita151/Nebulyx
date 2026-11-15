@@ -38,6 +38,11 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 
+# archives
+*.zip
+*.tar.gz
+*.tgz
+
 # python
 __pycache__/
 *.py[cod]
